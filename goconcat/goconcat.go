@@ -1,0 +1,5 @@
+package goconcat
+
+func Goconcat() {
+
+}
