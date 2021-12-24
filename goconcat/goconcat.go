@@ -1,5 +1,10 @@
 package goconcat
 
-func Goconcat() {
+import (
+	"io/ioutil"
+	"mockconcat/flags"
+)
 
+func Goconcat() {
+	ioutil.ReadDir(*flags.Path)
 }
