@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
 )
 
 var (
@@ -11,59 +12,80 @@ var (
 )
 
 func Goconcat() error {
-	fileNames, err := getFileNames(".")
+	filePaths, err := getFilePaths(".", []string{".git"}, ".go", "mock_")
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(fileNames)
+	test, err := ioutil.ReadFile(filePaths[0])
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("file", test)
+	fmt.Println("file", test)
+
+	fmt.Println(filePaths)
 	return nil
 }
 
-func getFileNames(path string) ([]string, error) {
-	var fileNames []string
+func getFilePaths(path string, ignoredDirectories []string, fileType string, prefix string) ([]string, error) {
+	var filePaths []string
 	var directories []string
+	var currentPath string
 
-	directPath := path
-
-	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		return nil, ErrReadingDirectories
-	}
-
-	for _, file := range files {
-		if !file.IsDir() {
-			fileNames = append(fileNames, file.Name())
-		} else {
-			directories = append(directories, directPath+"/"+file.Name())
-		}
-	}
+	directories = append(directories, path)
 
 	for {
-
-		for index, directory := range directories {
+		for _, directory := range directories {
+			if checkDirectoryIgnore(directory, ignoredDirectories) {
+				continue
+			}
+			currentPath += directory
 			files, err := ioutil.ReadDir(directory)
 			if err != nil {
 				return nil, ErrReadingDirectories
 			}
 
-			fmt.Println(directories, directory)
-			directories = append(directories[:index], directories[index+1:]...)
-			fmt.Println(directories, directory)
+			directories = removePathFromDirectories(directories, directory)
 
 			for _, file := range files {
-				if !file.IsDir() {
-					fileNames = append(fileNames, file.Name())
+				path := currentPath + "/" + file.Name()
+				if file.IsDir() {
+					directories = append(directories, path)
 				} else {
-					directories = append(directories, directPath+"/"+file.Name())
+					if strings.HasSuffix(file.Name(), fileType) && strings.HasPrefix(file.Name(), prefix) {
+						filePaths = append(filePaths, path)
+					}
 				}
 			}
+			currentPath = ""
 		}
-
 		if len(directories) == 0 {
 			break
 		}
 	}
 
-	return fileNames, nil
+	return filePaths, nil
+}
+
+func removePathFromDirectories(directories []string, path string) []string {
+	var newDirectories []string
+	for _, directory := range directories {
+		if directory == path {
+			continue
+		}
+
+		newDirectories = append(newDirectories, directory)
+	}
+	return newDirectories
+}
+
+func checkDirectoryIgnore(directory string, ignoredDirectories []string) bool {
+	for _, d := range ignoredDirectories {
+		if d == directory {
+			return true
+		}
+	}
+	return false
 }
