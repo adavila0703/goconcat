@@ -3,6 +3,7 @@ package goconcat
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"strings"
 )
@@ -22,8 +23,14 @@ func Goconcat() error {
 		return err
 	}
 
-	fmt.Println("file", test)
-	fmt.Println("file", test)
+	test2, err := ioutil.ReadFile(filePaths[1])
+	if err != nil {
+		return err
+	}
+
+	test = append(test, test2...)
+
+	ioutil.WriteFile("test.go", test, fs.ModeAppend)
 
 	fmt.Println(filePaths)
 	return nil
@@ -82,8 +89,8 @@ func removePathFromDirectories(directories []string, path string) []string {
 }
 
 func checkDirectoryIgnore(directory string, ignoredDirectories []string) bool {
-	for _, d := range ignoredDirectories {
-		if d == directory {
+	for _, ignoreDirectory := range ignoredDirectories {
+		if ignoreDirectory == directory {
 			return true
 		}
 	}
