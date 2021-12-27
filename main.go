@@ -1,9 +1,13 @@
 package main
 
 import (
+	"log"
 	"mockconcat/goconcat"
 )
 
 func main() {
-	goconcat.Goconcat()
+	err := goconcat.Goconcat()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
