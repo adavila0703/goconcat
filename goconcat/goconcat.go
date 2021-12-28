@@ -11,9 +11,7 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -46,6 +44,9 @@ func Goconcat() error {
 
 	import (
 		"fmt"
+	)
+
+	import (
 		"os"
 	)
 
@@ -63,18 +64,34 @@ func Goconcat() error {
 
 	// Create the AST by parsing src.
 	fset := token.NewFileSet() // positions are relative to fset
-	f, err := parser.ParseFile(fset, "src.go", src, parser.ImportsOnly)
+	f, err := parser.ParseFile(fset, "src.go", src, 0)
 	if err != nil {
 		panic(err)
 	}
 
-	ast.Print(fset, f)
+	if len(f.Imports) > 1 {
+		var newDecals []ast.Decl
 
-	var imports []string
+		for index, value := range f.Decls {
 
-	for _, value := range f.Imports {
-		imports = append(imports, value.Path)
+			switch value.(type) {
+			case *ast.GenDecl:
+				if value.(*ast.GenDecl).Tok == token.Token(75) && index != 0 {
+					continue
+				}
+
+				if value.(*ast.GenDecl).Tok == token.Token(75) && index == 0 {
+					f.Decls[index].(*ast.GenDecl).Specs = concatImport(f)
+				}
+			}
+
+			newDecals = append(newDecals, value)
+		}
+
+		f.Decls = newDecals
 	}
+
+	ast.Print(fset, f)
 
 	var buf bytes.Buffer
 	if err := format.Node(&buf, fset, f); err != nil {
@@ -82,88 +99,24 @@ func Goconcat() error {
 	}
 	fmt.Printf("%s", buf.Bytes())
 
-	// test := ast.NewCommentMap(fset, f, f.Comments)
-
 	// ioutil.WriteFile("test.go", test, fs.ModeAppend)
 	return nil
 }
 
-func addImport(f *ast.File, ipath string) (added bool) {
-	if imports(f, ipath) {
-		return false
-	}
+func concatImport(file *ast.File) []ast.Spec {
+	var newImports []ast.Spec
 
-	// Determine name of import.
-	// Assume added imports follow convention of using last element.
-	_, name := path.Split(ipath)
-
-	// Rename any conflicting top-level references from name to name_.
-	renameTop(f, name, name+"_")
-
-	newImport := &ast.ImportSpec{
-		Path: &ast.BasicLit{
-			Kind:  token.STRING,
-			Value: strconv.Quote(ipath),
-		},
-	}
-
-	// Find an import decl to add to.
-	var (
-		bestMatch  = -1
-		lastImport = -1
-		impDecl    *ast.GenDecl
-		impIndex   = -1
-	)
-	for i, decl := range f.Decls {
-		gen, ok := decl.(*ast.GenDecl)
-		if ok && gen.Tok == token.IMPORT {
-			lastImport = i
-
-			// Compute longest shared prefix with imports in this block.
-			for j, spec := range gen.Specs {
-				impspec := spec.(*ast.ImportSpec)
-				n := matchLen(importPath(impspec), ipath)
-				if n > bestMatch {
-					bestMatch = n
-					impDecl = gen
-					impIndex = j
-				}
+	for _, value := range file.Decls {
+		switch v := value.(type) {
+		case *ast.GenDecl:
+			//TODO get rid of this magic number. 75 = token.IMPORT
+			if v.Tok == token.Token(75) {
+				newImports = append(newImports, v.Specs...)
 			}
 		}
 	}
 
-	// If no import decl found, add one after the last import.
-	if impDecl == nil {
-		impDecl = &ast.GenDecl{
-			Tok: token.IMPORT,
-		}
-		f.Decls = append(f.Decls, nil)
-		copy(f.Decls[lastImport+2:], f.Decls[lastImport+1:])
-		f.Decls[lastImport+1] = impDecl
-	}
-
-	// Ensure the import decl has parentheses, if needed.
-	if len(impDecl.Specs) > 0 && !impDecl.Lparen.IsValid() {
-		impDecl.Lparen = impDecl.Pos()
-	}
-
-	insertAt := impIndex + 1
-	if insertAt == 0 {
-		insertAt = len(impDecl.Specs)
-	}
-	impDecl.Specs = append(impDecl.Specs, nil)
-	copy(impDecl.Specs[insertAt+1:], impDecl.Specs[insertAt:])
-	impDecl.Specs[insertAt] = newImport
-	if insertAt > 0 {
-		// Assign same position as the previous import,
-		// so that the sorter sees it as being in the same block.
-		prev := impDecl.Specs[insertAt-1]
-		newImport.Path.ValuePos = prev.Pos()
-		newImport.EndPos = prev.Pos()
-	}
-
-	f.Imports = append(f.Imports, newImport)
-	return true
+	return newImports
 }
 
 func getFilePaths(path string, ignoredDirectories []string, fileType string, prefix string) ([]string, error) {
