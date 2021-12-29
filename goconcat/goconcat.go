@@ -10,6 +10,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,75 +21,38 @@ var (
 )
 
 func Goconcat() error {
-	// filePaths, err := getFilePaths(".", []string{".git"}, ".go", "mock_")
-	// if err != nil {
-	// 	return err
-	// }
+	filePaths, err := getFilePaths(".", []string{".git"}, ".go", "mock_")
+	if err != nil {
+		return err
+	}
 
-	// test, err := ioutil.ReadFile(filePaths[0])
-	// if err != nil {
-	// 	return err
-	// }
+	src, err := getSource(filePaths)
+	if err != nil {
+		fmt.Println(src)
+		return err
+	}
 
-	// test2, err := ioutil.ReadFile(filePaths[1])
-	// if err != nil {
-	// 	return err
-	// }
-
-	// _, _ := fileToLines(filePaths[0])
-	// test = append(test, test2...)
-
-	src := `
-	// This is the package comment.
+	test := `
 	package main
 
 	import (
+		
+		"fmt"
 		"fmt"
 	)
-
-	import (
-		"os"
-	)
-
-	// This comment is associated with the hello constant.
-	const hello = "Hello, package!" // line comment 1
 	
-	// This comment is associated with the foo variable.
-	var foo = hello // line comment 2
-	
-	// This comment is associated with the main function.
-	func main() {
-		fmt.Println(hello) // line comment 3
-	}
 	`
 
 	// Create the AST by parsing src.
 	fset := token.NewFileSet() // positions are relative to fset
-	f, err := parser.ParseFile(fset, "src.go", src, 0)
+	f, err := parser.ParseFile(fset, "", test, 0)
 	if err != nil {
 		panic(err)
 	}
 
+	// concat all imports
 	if len(f.Imports) > 1 {
-		var newDecals []ast.Decl
-
-		for index, value := range f.Decls {
-
-			switch value.(type) {
-			case *ast.GenDecl:
-				if value.(*ast.GenDecl).Tok == token.Token(75) && index != 0 {
-					continue
-				}
-
-				if value.(*ast.GenDecl).Tok == token.Token(75) && index == 0 {
-					f.Decls[index].(*ast.GenDecl).Specs = concatImport(f)
-				}
-			}
-
-			newDecals = append(newDecals, value)
-		}
-
-		f.Decls = newDecals
+		f.Decls = concatImports(f)
 	}
 
 	ast.Print(fset, f)
@@ -103,14 +67,66 @@ func Goconcat() error {
 	return nil
 }
 
-func concatImport(file *ast.File) []ast.Spec {
+func getLengthOfVars(file *ast.File) int {
+	var count int
+	for _, decl := range file.Decls {
+		switch v := decl.(type) {
+		case *ast.GenDecl:
+			if v.Tok == token.Token(token.VAR) {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+func getSource(paths []string) (string, error) {
+	var src string
+
+	for _, path := range paths {
+		fileContents, err := ioutil.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+
+		src += string(fileContents)
+	}
+
+	return src, nil
+}
+
+func concatImports(file *ast.File) []ast.Decl {
+	var newDecals []ast.Decl
+
+	for index, decl := range file.Decls {
+		switch decl.(type) {
+		case *ast.GenDecl:
+			if decl.(*ast.GenDecl).Tok == token.IMPORT && index != 0 {
+				continue
+			}
+
+			if decl.(*ast.GenDecl).Tok == token.IMPORT && index == 0 {
+				file.Decls[index].(*ast.GenDecl).Specs = concatSpec(file)
+			}
+
+			for _, value := range decl.(*ast.GenDecl).Specs {
+				fmt.Println(value.(*ast.ImportSpec).Path.ValuePos)
+			}
+		}
+
+		newDecals = append(newDecals, decl)
+	}
+
+	return newDecals
+}
+
+func concatSpec(file *ast.File) []ast.Spec {
 	var newImports []ast.Spec
 
 	for _, value := range file.Decls {
 		switch v := value.(type) {
 		case *ast.GenDecl:
-			//TODO get rid of this magic number. 75 = token.IMPORT
-			if v.Tok == token.Token(75) {
+			if v.Tok == token.IMPORT {
 				newImports = append(newImports, v.Specs...)
 			}
 		}
