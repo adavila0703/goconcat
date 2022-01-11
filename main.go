@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	err := goconcat.Goconcat()
+	err := goconcat.GoConcat()
 	if err != nil {
 		log.Fatal(err)
 	}
