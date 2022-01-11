@@ -20,7 +20,7 @@ var (
 	ErrReadingDirectories = errors.New("error reading the directories")
 )
 
-func Goconcat() error {
+func GoConcat() error {
 	filePaths, err := getFilePaths(".", []string{".git"}, ".go", "mock_")
 	if err != nil {
 		return err
