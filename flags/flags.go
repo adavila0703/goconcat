@@ -1,6 +1,8 @@
 package flags
 
-import "flag"
+import (
+	"flag"
+)
 
 var (
 	Path = flag.String("p", "", "path")

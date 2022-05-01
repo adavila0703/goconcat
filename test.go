@@ -7,6 +7,8 @@ import (
 
 var (
 	TestVar = 3
+
+	_ IDog = (*Dog)(nil)
 )
 
 const (
@@ -17,7 +19,10 @@ type IPerson interface {
 	SayHello()
 }
 
-var _ IPerson = (*Person)(nil)
+var (
+	_ IPerson = (*Person)(nil)
+	_ IDog    = (*Dog)(nil)
+)
 
 type Person struct {
 	Name string
