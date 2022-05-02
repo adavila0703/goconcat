@@ -6,21 +6,30 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
-	"io/fs"
 	"io/ioutil"
-	"os"
+	"mockconcat/utils"
 
 	"github.com/pkg/errors"
 )
 
-func GoConcat() error {
-	filePaths, err := GetFilePaths(".", []string{".git"}, ".go", "mock_")
+func GoConcat(
+	path string,
+	ignoredDirectories []utils.Directory,
+	fileTypes []utils.FileType,
+	prefix []utils.PrefixType,
+) error {
+	filePaths, err := GetFilePaths(
+		path,
+		ignoredDirectories,
+		fileTypes,
+		prefix,
+	)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	var files []*ast.File
-	fileSet := token.NewFileSet() // positions are relative to fset
+	fileSet := token.NewFileSet()
 
 	for _, path := range filePaths {
 		fileContents, err := ioutil.ReadFile(path)
@@ -41,14 +50,10 @@ func GoConcat() error {
 		return errors.WithStack(err)
 	}
 
-	ast.Print(fileSet, concatFiles)
-
 	var buf bytes.Buffer
 	if err := format.Node(&buf, fileSet, concatFiles); err != nil {
-		panic(err)
+		return errors.WithStack(err)
 	}
 
-	os.Remove("test.go")
-	ioutil.WriteFile("test.go", buf.Bytes(), fs.ModeAppend)
 	return nil
 }
