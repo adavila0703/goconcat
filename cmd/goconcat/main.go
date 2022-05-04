@@ -1,10 +1,11 @@
 package main
 
 import (
-	"goconcat/internal/utils"
-	"goconcat/pkg/concat"
 	"log"
 	"os"
+
+	"github.com/adavila0703/goconcat/internal/utils"
+	"github.com/adavila0703/goconcat/pkg/concat"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"

@@ -7,11 +7,12 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
-	"goconcat/internal/utils"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/adavila0703/goconcat/internal/utils"
 
 	"github.com/pkg/errors"
 )

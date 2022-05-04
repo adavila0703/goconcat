@@ -2,7 +2,8 @@ package concat
 
 import (
 	"go/ast"
-	"goconcat/internal/utils"
+
+	"github.com/adavila0703/goconcat/internal/utils"
 )
 
 // removes decl from ast file

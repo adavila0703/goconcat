@@ -3,11 +3,12 @@ package concat
 import (
 	"go/ast"
 	"go/token"
-	"goconcat/internal/utils"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/adavila0703/goconcat/internal/utils"
 
 	"github.com/pkg/errors"
 )

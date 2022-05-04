@@ -7,8 +7,9 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
-	"goconcat/internal/utils"
 	"testing"
+
+	"github.com/adavila0703/goconcat/internal/utils"
 
 	"github.com/stretchr/testify/assert"
 )
