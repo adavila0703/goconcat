@@ -1,4 +1,4 @@
-package goconcat
+package concat
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
-	"mockconcat/utils"
+	"goconcat/internal/utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -120,7 +120,6 @@ func TestConcatFiles_Vars(t *testing.T) {
 	}
 
 	expectedFile, err := parser.ParseFile(mockFileSet, "", expectedFileContents, 0)
-	fmt.Println(err)
 	assert.NoError(err)
 
 	var expectedOutput bytes.Buffer
@@ -262,7 +261,6 @@ func TestConcatFiles_Types(t *testing.T) {
 	}
 
 	expectedFile, err := parser.ParseFile(mockFileSet, "", expectedFileContents, 0)
-	fmt.Println(err)
 	assert.NoError(err)
 
 	var expectedOutput bytes.Buffer
@@ -337,7 +335,6 @@ func TestConcatFiles_Func(t *testing.T) {
 	}
 
 	expectedFile, err := parser.ParseFile(mockFileSet, "", expectedFileContents, 0)
-	fmt.Println(err)
 	assert.NoError(err)
 
 	var expectedOutput bytes.Buffer
@@ -359,7 +356,7 @@ func TestGetFilePaths(t *testing.T) {
 			utils.FileGo,
 		},
 		[]utils.PrefixType{
-			utils.PrefixMock,
+			utils.PrefixMockery,
 		},
 	)
 	assert.NoError(err)

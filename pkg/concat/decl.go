@@ -1,8 +1,8 @@
-package goconcat
+package concat
 
 import (
 	"go/ast"
-	"mockconcat/utils"
+	"goconcat/internal/utils"
 )
 
 // removes decl from ast file

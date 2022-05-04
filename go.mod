@@ -1,4 +1,4 @@
-module mockconcat
+module goconcat
 
 go 1.18
 

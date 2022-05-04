@@ -14,11 +14,12 @@ const (
 	FileTypeScript FileType = ".ts"
 
 	// prefix type
-	PrefixMock PrefixType = "mock_"
+	PrefixMockery  PrefixType = "mock_"
+	PrefixGoconcat PrefixType = "mocks_"
 
 	// directories
 	DirectoryGit Directory = ".git"
 
 	// destination directories
-	DestinationMockery Destination = "./mockery"
+	DestinationMockery Destination = "mockery"
 )

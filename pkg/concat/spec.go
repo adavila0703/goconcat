@@ -1,4 +1,4 @@
-package goconcat
+package concat
 
 import (
 	"go/ast"

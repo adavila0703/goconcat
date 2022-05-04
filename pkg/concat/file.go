@@ -1,56 +1,59 @@
-package goconcat
+package concat
 
 import (
 	"go/ast"
 	"go/token"
+	"goconcat/internal/utils"
 	"io/fs"
-	"mockconcat/utils"
+	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // concatenates all ast files
 func ConcatFiles(files []*ast.File, fileSet *token.FileSet) (*ast.File, error) {
-	if len(files) > 1 {
-		targetFile, leftOverFiles := removeASTFileByIndex(files, 0)
-
-		// concat targetfile
-		concatenateTargetFile(targetFile)
-
-		var importsToAdd []string
-
-		for _, file := range leftOverFiles {
-			for _, fileImports := range file.Imports {
-				importsToAdd = append(importsToAdd, fileImports.Path.Value)
-			}
-		}
-
-		ConcatImports(targetFile, fileSet, importsToAdd)
-
-		// concat all types
-		for _, file := range leftOverFiles {
-			var tok token.Token
-
-			tok = token.VAR
-			spec, _ := GetSpecsAndIndices(file, tok)
-			AddSpecToTargetFile(targetFile, spec, tok)
-
-			tok = token.CONST
-			spec, _ = GetSpecsAndIndices(file, tok)
-			AddSpecToTargetFile(targetFile, spec, tok)
-
-			tok = token.TYPE
-			spec, _ = GetSpecsAndIndices(file, tok)
-			AddSpecToTargetFile(targetFile, spec, tok)
-		}
-
-		funcs := GetFuncDeclFromFiles(leftOverFiles)
-
-		targetFile.Decls = append(targetFile.Decls, funcs...)
-
+	targetFile, leftOverFiles := removeASTFileByIndex(files, 0)
+	if len(leftOverFiles) < 1 {
 		return targetFile, nil
 	}
-	return nil, ErrReadingDirectories
+
+	// concat targetfile
+	concatenateTargetFile(targetFile)
+
+	var importsToAdd []string
+
+	for _, file := range leftOverFiles {
+		for _, fileImports := range file.Imports {
+			importsToAdd = append(importsToAdd, fileImports.Path.Value)
+		}
+	}
+
+	ConcatImports(targetFile, fileSet, importsToAdd)
+
+	// concat all types
+	for _, file := range leftOverFiles {
+		var tok token.Token
+
+		tok = token.VAR
+		spec, _ := GetSpecsAndIndices(file, tok)
+		AddSpecToTargetFile(targetFile, spec, tok)
+
+		tok = token.CONST
+		spec, _ = GetSpecsAndIndices(file, tok)
+		AddSpecToTargetFile(targetFile, spec, tok)
+
+		tok = token.TYPE
+		spec, _ = GetSpecsAndIndices(file, tok)
+		AddSpecToTargetFile(targetFile, spec, tok)
+	}
+
+	funcs := GetFuncDeclFromFiles(leftOverFiles)
+
+	targetFile.Decls = append(targetFile.Decls, funcs...)
+
+	return targetFile, nil
 }
 
 func concatenateTargetFile(file *ast.File) {
@@ -76,7 +79,7 @@ func concatType(file *ast.File, tok token.Token) {
 }
 
 func GetFilePaths(
-	path string,
+	rootPath string,
 	ignoredDirectories []utils.Directory,
 	fileTypes []utils.FileType,
 	prefix []utils.PrefixType,
@@ -92,7 +95,7 @@ func GetFilePaths(
 		fileTypeMap[fileType] = fileType
 	}
 
-	filepath.Walk(path, func(path string, info fs.FileInfo, err error) error {
+	filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
 		if checkDirectoryIgnore(path, ignoredDirectories) {
 			return nil
 		}
@@ -113,6 +116,10 @@ func GetFilePaths(
 		}
 		return nil
 	})
+
+	if len(filePaths) < 1 {
+		return nil, errors.WithStack(ErrNoFilesDetected)
+	}
 
 	return filePaths, nil
 }
@@ -166,4 +173,29 @@ func containsPrefix(info fs.FileInfo, prefix []utils.PrefixType) bool {
 		}
 	}
 	return false
+}
+
+func DeleteFiles(filePaths []string) error {
+	for _, file := range filePaths {
+		if err := os.Remove(file); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
+}
+
+func DestinationDirIsValid(rootPath string, destination string) bool {
+	des := utils.AnyToString(destination)
+	dirIsValid := false
+
+	filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
+		if info.IsDir() {
+			if info.Name() == des {
+				dirIsValid = true
+			}
+		}
+		return nil
+	})
+
+	return dirIsValid
 }
