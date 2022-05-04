@@ -1,4 +1,4 @@
-module goconcat
+module github.com/adavila0703/goconcat
 
 go 1.18
 
