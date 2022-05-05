@@ -1,4 +1,4 @@
-package concat
+package goconcat
 
 import (
 	"bytes"
@@ -8,8 +8,6 @@ import (
 	"go/parser"
 	"go/token"
 	"testing"
-
-	"github.com/adavila0703/goconcat/internal/utils"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -350,14 +348,14 @@ func TestGetFilePaths(t *testing.T) {
 	assert := assert.New(t)
 	filePaths, err := GetFilePaths(
 		".",
-		[]utils.Directory{
-			utils.DirectoryGit,
+		[]Directory{
+			DirectoryGit,
 		},
-		[]utils.FileType{
-			utils.FileGo,
+		[]FileType{
+			FileGo,
 		},
-		[]utils.PrefixType{
-			utils.PrefixMockery,
+		[]PrefixType{
+			PrefixMockery,
 		},
 	)
 	assert.NoError(err)

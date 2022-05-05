@@ -1,16 +1,14 @@
-package concat
+package goconcat
 
 import (
 	"go/ast"
-
-	"github.com/adavila0703/goconcat/internal/utils"
 )
 
 // removes decl from ast file
 func RemoveDecl(file *ast.File, indices []int) {
 	// get the first index of decl as the base decl
-	indices = utils.RemoveFromSlice(indices, 0)
-	file.Decls = utils.ReturnAllButIndices(file.Decls, indices)
+	indices = RemoveFromSlice(indices, 0)
+	file.Decls = ReturnAllButIndices(file.Decls, indices)
 }
 
 func GetFuncDeclFromFiles(files []*ast.File) []ast.Decl {

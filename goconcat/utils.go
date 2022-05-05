@@ -1,4 +1,4 @@
-package utils
+package goconcat
 
 // removes index and returns new slice
 func RemoveFromSlice[T any](slice []T, index int) (poppedSlice []T) {

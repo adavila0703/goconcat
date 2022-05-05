@@ -1,4 +1,4 @@
-package utils
+package goconcat
 
 type FileType string
 type PrefixType string

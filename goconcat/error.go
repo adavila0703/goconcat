@@ -1,4 +1,4 @@
-package concat
+package goconcat
 
 import "errors"
 

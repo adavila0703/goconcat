@@ -1,15 +1,12 @@
-package concat
+package goconcat
 
 import (
-	"fmt"
 	"go/ast"
 	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/adavila0703/goconcat/internal/utils"
 
 	"github.com/pkg/errors"
 )
@@ -73,7 +70,7 @@ func concatenateTargetFile(file *ast.File) {
 func concatType(file *ast.File, tok token.Token) {
 	specs, indices := GetSpecsAndIndices(file, tok)
 
-	specs = utils.RemoveFromSlice(specs, 0)
+	specs = RemoveFromSlice(specs, 0)
 
 	RemoveDecl(file, indices)
 
@@ -82,13 +79,13 @@ func concatType(file *ast.File, tok token.Token) {
 
 func GetFilePaths(
 	rootPath string,
-	ignoredDirectories []utils.Directory,
-	fileTypes []utils.FileType,
-	prefix []utils.PrefixType,
+	ignoredDirectories []Directory,
+	fileTypes []FileType,
+	prefix []PrefixType,
 ) ([]string, error) {
 	var filePaths []string
 
-	fileTypeMap := make(map[utils.FileType]utils.FileType)
+	fileTypeMap := make(map[FileType]FileType)
 
 	for _, fileType := range fileTypes {
 		if _, ok := fileTypeMap[fileType]; ok {
@@ -101,8 +98,6 @@ func GetFilePaths(
 		if checkDirectoryIgnore(path, ignoredDirectories) {
 			return nil
 		}
-
-		fmt.Println("name", info.Name())
 
 		if !info.IsDir() {
 			suffix := getSuffixFileType(info.Name())
@@ -139,9 +134,9 @@ func removeASTFileByIndex(files []*ast.File, fileIndex int) (targetFile *ast.Fil
 	return
 }
 
-func checkDirectoryIgnore(path string, ignoredDirectories []utils.Directory) bool {
+func checkDirectoryIgnore(path string, ignoredDirectories []Directory) bool {
 	for _, ignoreDirectory := range ignoredDirectories {
-		directory := utils.AnyToString(ignoreDirectory)
+		directory := AnyToString(ignoreDirectory)
 		if strings.Contains(path, directory) {
 			return true
 		}
@@ -165,13 +160,13 @@ func AddSpecToTargetFile[T Specs](targetFile *ast.File, spec T, tok token.Token)
 	}
 }
 
-func getSuffixFileType(fileName string) utils.FileType {
-	return utils.FileType(filepath.Ext(fileName))
+func getSuffixFileType(fileName string) FileType {
+	return FileType(filepath.Ext(fileName))
 }
 
-func containsPrefix(info fs.FileInfo, prefix []utils.PrefixType) bool {
+func containsPrefix(info fs.FileInfo, prefix []PrefixType) bool {
 	for _, p := range prefix {
-		sPrefix := utils.AnyToString(p)
+		sPrefix := AnyToString(p)
 		if strings.HasPrefix(info.Name(), sPrefix) {
 			return true
 		}
@@ -189,7 +184,7 @@ func DeleteFiles(filePaths []string) error {
 }
 
 func DestinationDirIsValid(rootPath string, destination string) bool {
-	des := utils.AnyToString(destination)
+	des := AnyToString(destination)
 	dirIsValid := false
 
 	filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {

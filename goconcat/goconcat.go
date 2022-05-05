@@ -12,8 +12,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/adavila0703/goconcat/internal/utils"
-	"github.com/adavila0703/goconcat/pkg/concat"
 	"github.com/pkg/errors"
 )
 
@@ -25,7 +23,7 @@ func GoConcat(
 		return errors.WithStack(err)
 	}
 
-	filePaths, err := concat.GetFilePaths(
+	filePaths, err := GetFilePaths(
 		options.RootPath,
 		options.IgnoredDirectories,
 		options.FileType,
@@ -63,8 +61,8 @@ func GoConcat(
 			return errors.WithStack(err)
 		}
 
-		des := utils.AnyToString(options.Destination)
-		isValid := concat.DestinationDirIsValid(options.RootPath, des)
+		des := AnyToString(options.Destination)
+		isValid := DestinationDirIsValid(options.RootPath, des)
 
 		if !isValid && !options.MockeryDestination {
 			if err := os.Mkdir(des, os.ModePerm); err != nil {
@@ -72,7 +70,7 @@ func GoConcat(
 			}
 		}
 
-		finalPath := GetDestinationPath(des, file.Name.Name, utils.FileGo, options, filePaths)
+		finalPath := GetDestinationPath(des, file.Name.Name, FileGo, options, filePaths)
 
 		if err := ioutil.WriteFile(finalPath, buf.Bytes(), os.ModePerm); err != nil {
 			return errors.WithStack(err)
@@ -80,7 +78,7 @@ func GoConcat(
 	}
 
 	if options.DeleteOldFiles {
-		if err := concat.DeleteFiles(filePaths); err != nil {
+		if err := DeleteFiles(filePaths); err != nil {
 			return errors.WithStack(err)
 		}
 	}
@@ -105,7 +103,7 @@ func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet)
 		}
 
 		for _, files := range filePackageMap {
-			concatFiles, err := concat.ConcatFiles(files, fileSet)
+			concatFiles, err := ConcatFiles(files, fileSet)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
@@ -113,7 +111,7 @@ func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet)
 		}
 
 	} else {
-		concatFiles, err := concat.ConcatFiles(files, fileSet)
+		concatFiles, err := ConcatFiles(files, fileSet)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -126,11 +124,11 @@ func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet)
 func GetDestinationPath(
 	destination string,
 	packageName string,
-	fileType utils.FileType,
+	fileType FileType,
 	options *Options,
 	filePaths []string,
 ) string {
-	file := utils.AnyToString(fileType)
+	file := AnyToString(fileType)
 
 	if options.MockeryDestination {
 		findPackage := regexp.MustCompile(packageName)
@@ -154,7 +152,7 @@ func GetDestinationPath(
 
 func validateOptions(options *Options) error {
 	if options.FileType == nil {
-		options.FileType = []utils.FileType{utils.FileGo}
+		options.FileType = []FileType{FileGo}
 	}
 
 	return nil
