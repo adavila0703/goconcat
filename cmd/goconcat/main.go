@@ -1,16 +1,12 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/adavila0703/goconcat"
-	"github.com/adavila0703/goconcat/internal/utils"
-	"github.com/adavila0703/goconcat/pkg/concat"
-	jsoniter "github.com/json-iterator/go"
+	"github.com/adavila0703/goconcat/goconcat"
 	"github.com/urfave/cli/v2"
 )
 
@@ -75,25 +71,27 @@ var (
 
 func simpleConcat(c *cli.Context) error {
 	rootPath := c.Args().Get(0)
-	ignoredDirectories := utils.StringToType[utils.Directory](
+	ignoredDirectories := goconcat.StringToType[goconcat.Directory](
 		strings.Split(c.Args().Get(1), ","),
 	)
 
-	filePrefix := utils.StringToType[utils.PrefixType](
+	filePrefix := goconcat.StringToType[goconcat.PrefixType](
 		strings.Split(c.Args().Get(2), ","),
 	)
 
 	destination := c.Args().Get(3)
 	deleteOldFiles, err := strconv.ParseBool(c.Args().Get(4))
 	if err != nil {
-		log.Fatal(concat.ErrBoolCouldNotBeParsed)
+		log.Fatal(goconcat.ErrBoolCouldNotBeParsed)
 	}
 
-	fileTypes := []utils.FileType{
-		utils.FileGo,
+	fileTypes := []goconcat.FileType{
+		goconcat.FileGo,
 	}
 
-	options := goconcat.NewOptions(
+	options := goconcat.NewOptions()
+
+	options.SetOptions(
 		rootPath,
 		ignoredDirectories,
 		filePrefix,
@@ -114,24 +112,16 @@ func simpleConcat(c *cli.Context) error {
 func jsonConcat(c *cli.Context) error {
 	jsonFilePath := c.Args().Get(0)
 	if jsonFilePath == "" {
-		log.Fatal(concat.ErrNoFilePathForJson)
+		log.Fatal(goconcat.ErrNoFilePathForJson)
 	}
 
-	file, err := ioutil.ReadFile(jsonFilePath)
-	if err != nil {
-		log.Fatal(err)
-	}
+	options := goconcat.NewOptions()
 
-	var options goconcat.Options
+	options.AddJsonSettings(jsonFilePath)
 
-	err = jsoniter.UnmarshalFromString(string(file), &options)
-	if err != nil {
-		log.Fatal(err)
-	}
+	options.FileType = append(options.FileType, goconcat.FileGo)
 
-	options.FileType = append(options.FileType, utils.FileGo)
-
-	if err := goconcat.GoConcat(&options); err != nil {
+	if err := goconcat.GoConcat(options); err != nil {
 		log.Fatal(err)
 	}
 
