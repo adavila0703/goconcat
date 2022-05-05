@@ -1,6 +1,7 @@
 package concat
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"io/fs"
@@ -100,6 +101,8 @@ func GetFilePaths(
 		if checkDirectoryIgnore(path, ignoredDirectories) {
 			return nil
 		}
+
+		fmt.Println("name", info.Name())
 
 		if !info.IsDir() {
 			suffix := getSuffixFileType(info.Name())

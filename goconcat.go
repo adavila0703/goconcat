@@ -1,4 +1,4 @@
-package concat
+package goconcat
 
 import (
 	"bytes"
@@ -13,23 +13,23 @@ import (
 	"strings"
 
 	"github.com/adavila0703/goconcat/internal/utils"
-
+	"github.com/adavila0703/goconcat/pkg/concat"
 	"github.com/pkg/errors"
 )
 
 func GoConcat(
-	rootPath string,
-	ignoredDirectories []utils.Directory,
-	fileTypes []utils.FileType,
-	prefix []utils.PrefixType,
-	destination utils.Destination,
-	options *utils.Options,
+	options *Options,
 ) error {
-	filePaths, err := GetFilePaths(
-		rootPath,
-		ignoredDirectories,
-		fileTypes,
-		prefix,
+	err := validateOptions(options)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	filePaths, err := concat.GetFilePaths(
+		options.RootPath,
+		options.IgnoredDirectories,
+		options.FileType,
+		options.FilePrefix,
 	)
 	if err != nil {
 		return errors.WithStack(err)
@@ -52,7 +52,7 @@ func GoConcat(
 		filesToConcat = append(filesToConcat, astFiles)
 	}
 
-	filesToSort, err := getFilesToSort(filesToConcat, options, fileSet)
+	filesToSort, err := GetFilesToSort(filesToConcat, options, fileSet)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -63,8 +63,8 @@ func GoConcat(
 			return errors.WithStack(err)
 		}
 
-		des := utils.AnyToString(destination)
-		isValid := DestinationDirIsValid(rootPath, des)
+		des := utils.AnyToString(options.Destination)
+		isValid := concat.DestinationDirIsValid(options.RootPath, des)
 
 		if !isValid && !options.MockeryDestination {
 			if err := os.Mkdir(des, os.ModePerm); err != nil {
@@ -72,21 +72,23 @@ func GoConcat(
 			}
 		}
 
-		finalPath := getDestinationPath(des, file.Name.Name, utils.FileGo, options, filePaths)
+		finalPath := GetDestinationPath(des, file.Name.Name, utils.FileGo, options, filePaths)
 
 		if err := ioutil.WriteFile(finalPath, buf.Bytes(), os.ModePerm); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 
-	if err := DeleteFiles(filePaths); err != nil {
-		return errors.WithStack(err)
+	if options.DeleteOldFiles {
+		if err := concat.DeleteFiles(filePaths); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 
 	return nil
 }
 
-func getFilesToSort(files []*ast.File, options *utils.Options, fileSet *token.FileSet) ([]*ast.File, error) {
+func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet) ([]*ast.File, error) {
 	var filesToSort []*ast.File
 
 	if options.ConcatPackages {
@@ -103,7 +105,7 @@ func getFilesToSort(files []*ast.File, options *utils.Options, fileSet *token.Fi
 		}
 
 		for _, files := range filePackageMap {
-			concatFiles, err := ConcatFiles(files, fileSet)
+			concatFiles, err := concat.ConcatFiles(files, fileSet)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
@@ -111,7 +113,7 @@ func getFilesToSort(files []*ast.File, options *utils.Options, fileSet *token.Fi
 		}
 
 	} else {
-		concatFiles, err := ConcatFiles(files, fileSet)
+		concatFiles, err := concat.ConcatFiles(files, fileSet)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -121,11 +123,11 @@ func getFilesToSort(files []*ast.File, options *utils.Options, fileSet *token.Fi
 	return filesToSort, nil
 }
 
-func getDestinationPath(
+func GetDestinationPath(
 	destination string,
 	packageName string,
 	fileType utils.FileType,
-	options *utils.Options,
+	options *Options,
 	filePaths []string,
 ) string {
 	file := utils.AnyToString(fileType)
@@ -148,4 +150,12 @@ func getDestinationPath(
 	}
 
 	return "./" + destination + "/" + packageName + file
+}
+
+func validateOptions(options *Options) error {
+	if options.FileType == nil {
+		options.FileType = []utils.FileType{utils.FileGo}
+	}
+
+	return nil
 }

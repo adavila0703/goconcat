@@ -47,3 +47,17 @@ type StringConvert interface {
 func AnyToString[T StringConvert](s T) string {
 	return string(s)
 }
+
+type TSlice interface {
+	~string
+}
+
+func StringToType[T TSlice](slice []string) []T {
+	var newDirectories []T
+
+	for _, s := range slice {
+		newDirectories = append(newDirectories, T(s))
+	}
+
+	return newDirectories
+}
