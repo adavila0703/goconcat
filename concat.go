@@ -20,12 +20,7 @@ func GoConcat(options *Options) error {
 		return errors.WithStack(err)
 	}
 
-	filePaths, err := GetFilePaths(
-		options.RootPath,
-		options.IgnoredDirectories,
-		options.FileType,
-		options.FilePrefix,
-	)
+	filePaths, err := GetFilePaths(options)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -103,6 +98,10 @@ func getDestinationPath(
 func validateOptions(options *Options) error {
 	if options.FileType == nil {
 		options.FileType = []FileType{FileGo}
+	} else if options.RootPath == "" {
+		errors.WithStack(errNoRootPath)
+	} else if len(options.FilePrefix) < 1 {
+		return errors.WithStack(errNoPrefix)
 	}
 
 	return nil

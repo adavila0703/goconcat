@@ -14,6 +14,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestConcatFiles_OneFile(t *testing.T) {
+	assert := assert.New(t)
+
+	mockFiles := []*ast.File{
+		{
+			Name: &ast.Ident{
+				Name: "test",
+			},
+		},
+	}
+
+	mockFileSet := token.NewFileSet()
+
+	file, err := ConcatFiles(mockFiles, mockFileSet)
+
+	assert.NoError(err)
+	assert.Equal(mockFiles[0], file)
+}
+
 func TestConcatFiles_Imports(t *testing.T) {
 	assert := assert.New(t)
 
@@ -57,8 +76,8 @@ func TestConcatFiles_Imports(t *testing.T) {
 	concatFile, err := ConcatFiles(files, mockFileSet)
 	assert.NoError(err)
 
-	var outPut bytes.Buffer
-	if err := format.Node(&outPut, mockFileSet, concatFile); err != nil {
+	var output bytes.Buffer
+	if err := format.Node(&output, mockFileSet, concatFile); err != nil {
 		assert.NoError(err)
 	}
 
@@ -70,7 +89,7 @@ func TestConcatFiles_Imports(t *testing.T) {
 		assert.NoError(err)
 	}
 
-	assert.Equal(expectedOutput.String(), outPut.String())
+	assert.Equal(expectedOutput.String(), output.String())
 }
 
 func TestConcatFiles_Vars(t *testing.T) {
@@ -115,8 +134,8 @@ func TestConcatFiles_Vars(t *testing.T) {
 	concatFile, err := ConcatFiles(files, mockFileSet)
 	assert.NoError(err)
 
-	var outPut bytes.Buffer
-	if err := format.Node(&outPut, mockFileSet, concatFile); err != nil {
+	var output bytes.Buffer
+	if err := format.Node(&output, mockFileSet, concatFile); err != nil {
 		assert.NoError(err)
 	}
 
@@ -128,7 +147,7 @@ func TestConcatFiles_Vars(t *testing.T) {
 		assert.NoError(err)
 	}
 
-	assert.Equal(expectedOutput.String(), outPut.String())
+	assert.Equal(expectedOutput.String(), output.String())
 }
 
 func TestConcatFiles_Const(t *testing.T) {
@@ -362,9 +381,148 @@ func TestDeleteFiles(t *testing.T) {
 }
 
 func TestGetFilesToSort(t *testing.T) {
+	assert := assert.New(t)
+
+	mockFiles := []string{`
+		package test
+
+		const (
+			name = "name"
+		)
+		`,
+		`
+		package test
+
+		const (
+			age = 30
+		)
+		`,
+	}
+
+	mockFileSet := token.NewFileSet()
+
+	var files []*ast.File
+
+	for _, mockFile := range mockFiles {
+		file, err := parser.ParseFile(mockFileSet, "", mockFile, 0)
+		assert.NoError(err)
+
+		files = append(files, file)
+	}
+
+	options := NewOptions()
+
+	sortedFiles, err := GetFilesToSort(files, options, mockFileSet)
+	assert.NoError(err)
+
+	var output bytes.Buffer
+	err = format.Node(&output, mockFileSet, sortedFiles[0])
+	assert.NoError(err)
+
+	assert.Equal("package test\n\nconst (\n\tname = \"name\"\n\tage  = 30\n)\n", output.String())
+
+}
+
+func TestGetFilesToSort_ConcatPackages(t *testing.T) {
+	assert := assert.New(t)
+
+	mockFiles := []string{`
+		package test
+
+		const (
+			name = "name"
+		)
+		`,
+		`
+		package test
+
+		const (
+			age = 30
+		)
+		`,
+	}
+
+	mockFileSet := token.NewFileSet()
+
+	var files []*ast.File
+
+	for _, mockFile := range mockFiles {
+		file, err := parser.ParseFile(mockFileSet, "", mockFile, 0)
+		assert.NoError(err)
+
+		files = append(files, file)
+	}
+
+	options := NewOptions()
+	options.ConcatPackages = true
+
+	sortedFiles, err := GetFilesToSort(files, options, mockFileSet)
+	assert.NoError(err)
+
+	var output bytes.Buffer
+	err = format.Node(&output, mockFileSet, sortedFiles[0])
+	assert.NoError(err)
+
+	assert.Equal("package test\n\nconst (\n\tname = \"name\"\n\tage  = 30\n)\n", output.String())
 
 }
 
 func TestGetFilePaths(t *testing.T) {
+	assert := assert.New(t)
+	options := NewOptions()
 
+	options.SetOptions(
+		".",
+		[]Directory{},
+		[]PrefixType{"file"},
+		"",
+		false,
+		false,
+		false,
+		[]FileType{FileGo},
+	)
+
+	paths, err := GetFilePaths(options)
+	assert.NoError(err)
+
+	assert.Equal([]string{"file.go", "file_test.go"}, paths)
+}
+
+func TestParseASTFiles(t *testing.T) {
+	assert := assert.New(t)
+
+	mockFilesContent := `package test
+	var hello string
+	`
+	mockFileSet := token.NewFileSet()
+	file, err := parser.ParseFile(mockFileSet, "", mockFilesContent, 0)
+	assert.NoError(err)
+
+	err = WriteASTFile(file, mockFileSet, "test.go")
+	assert.NoError(err)
+
+	mockFilePath := []string{"test.go"}
+
+	parsedFile, parsedFileSet, err := ParseASTFiles(mockFilePath)
+	assert.NoError(err)
+
+	var output bytes.Buffer
+	err = format.Node(&output, parsedFileSet, parsedFile[0])
+	assert.NoError(err)
+
+	assert.Equal("package test\n\nvar hello string\n", output.String())
+
+	DeleteFiles(mockFilePath)
+}
+
+func TestCheckDirectoryIgnore(t *testing.T) {
+	assert := assert.New(t)
+
+	ignoredDirectories := []Directory{
+		"test.go",
+	}
+
+	isValid := checkDirectoryIgnore("test.go", ignoredDirectories)
+
+	assert.True(isValid)
 }

@@ -59,25 +59,24 @@ func ConcatFiles(files []*ast.File, fileSet *token.FileSet) (*ast.File, error) {
 	return targetFile, nil
 }
 
-func GetFilePaths(
-	rootPath string,
-	ignoredDirectories []Directory,
-	fileTypes []FileType,
-	prefix []PrefixType,
-) ([]string, error) {
+func GetFilePaths(options *Options) ([]string, error) {
+	if err := validateOptions(options); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	var filePaths []string
 
 	fileTypeMap := make(map[FileType]FileType)
 
-	for _, fileType := range fileTypes {
+	for _, fileType := range options.FileType {
 		if _, ok := fileTypeMap[fileType]; ok {
 			continue
 		}
 		fileTypeMap[fileType] = fileType
 	}
 
-	filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
-		if checkDirectoryIgnore(path, ignoredDirectories) {
+	filepath.Walk(options.RootPath, func(path string, info fs.FileInfo, err error) error {
+		if checkDirectoryIgnore(path, options.IgnoredDirectories) {
 			return nil
 		}
 
@@ -87,7 +86,7 @@ func GetFilePaths(
 				return nil
 			}
 
-			hasPrefix := containsPrefix(info, prefix)
+			hasPrefix := containsPrefix(info, options.FilePrefix)
 
 			if !hasPrefix {
 				return nil
@@ -114,6 +113,7 @@ func DeleteFiles(filePaths []string) error {
 	return nil
 }
 
+// can return single ast file or list of files depending if you want to sort by package
 func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet) ([]*ast.File, error) {
 	var filesToSort []*ast.File
 
@@ -137,13 +137,12 @@ func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet)
 			}
 			filesToSort = append(filesToSort, concatFiles)
 		}
-
 	} else {
-		concatFiles, err := ConcatFiles(files, fileSet)
+		file, err := ConcatFiles(files, fileSet)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		filesToSort = append(filesToSort, concatFiles)
+		filesToSort = append(filesToSort, file)
 	}
 
 	return filesToSort, nil

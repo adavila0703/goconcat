@@ -10,4 +10,6 @@ var (
 	errBoolCouldNotBeParsed = errors.New("error: please make sure you pass in true or false")
 	errNoFilePathForJson    = errors.New("error: you need to enter in a file path for your json file")
 	errNoFilePath           = errors.New("error: no file path")
+	errNoRootPath           = errors.New("error: a rootpath needs to be specified in the options")
+	errNoPrefix             = errors.New("error: no prefix was specified in the options, please add one")
 )
