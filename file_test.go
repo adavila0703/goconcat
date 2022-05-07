@@ -7,6 +7,8 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -361,4 +363,24 @@ func TestGetFilePaths(t *testing.T) {
 	assert.NoError(err)
 
 	fmt.Println(filePaths)
+}
+
+func TestDeleteFiles(t *testing.T) {
+	assert := assert.New(t)
+	mockContent := `package main`
+
+	err := ioutil.WriteFile("test.go", []byte(mockContent), os.ModePerm)
+	assert.NoError(err)
+
+	mockFilePath := []string{"test.go"}
+	expectedErr := "open test.go: The system cannot find the file specified."
+
+	DeleteFiles(mockFilePath)
+
+	_, _, err = ParseASTFiles(mockFilePath)
+	assert.Equal(expectedErr, err.Error())
+}
+
+func TestGetFilesToSort(t *testing.T) {
+
 }

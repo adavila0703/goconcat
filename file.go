@@ -57,15 +57,6 @@ func ConcatFiles(files []*ast.File, fileSet *token.FileSet) (*ast.File, error) {
 	return targetFile, nil
 }
 
-func DeleteFiles(filePaths []string) error {
-	for _, file := range filePaths {
-		if err := os.Remove(file); err != nil {
-			return errors.WithStack(err)
-		}
-	}
-	return nil
-}
-
 func GetFilePaths(
 	rootPath string,
 	ignoredDirectories []Directory,
@@ -112,6 +103,15 @@ func GetFilePaths(
 	return filePaths, nil
 }
 
+func DeleteFiles(filePaths []string) error {
+	for _, file := range filePaths {
+		if err := os.Remove(file); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
+}
+
 func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet) ([]*ast.File, error) {
 	var filesToSort []*ast.File
 
@@ -151,6 +151,10 @@ func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet)
 func ParseASTFiles(filePaths []string) ([]*ast.File, *token.FileSet, error) {
 	var filesToConcat []*ast.File
 	fileSet := token.NewFileSet()
+
+	if len(filePaths) < 1 {
+		return nil, nil, errors.WithStack(errNoFilePath)
+	}
 
 	for _, path := range filePaths {
 		fileContents, err := ioutil.ReadFile(path)

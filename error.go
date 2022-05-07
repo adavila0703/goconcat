@@ -9,4 +9,5 @@ var (
 	errNotEnoughFiles       = errors.New("error: not enough files were able to be read")
 	errBoolCouldNotBeParsed = errors.New("error: please make sure you pass in true or false")
 	errNoFilePathForJson    = errors.New("error: you need to enter in a file path for your json file")
+	errNoFilePath           = errors.New("error: no file path")
 )

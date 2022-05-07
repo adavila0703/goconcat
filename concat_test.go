@@ -1,13 +1,73 @@
 package goconcat
 
 import (
+	"bytes"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/token"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestGoConcat(t *testing.T) {
+	assert := assert.New(t)
+
+	mockFileContent := map[string]string{
+		"test_file_one.go": `package test
+		var foo string
+		`,
+		"test_file_two.go": `package test
+		var bar string
+		`,
+	}
+	fileSet := token.NewFileSet()
+
+	for key, value := range mockFileContent {
+		file, err := parser.ParseFile(fileSet, key, value, 0)
+		assert.NoError(err)
+
+		var buf bytes.Buffer
+		err = format.Node(&buf, fileSet, file)
+		assert.NoError(err)
+
+		err = ioutil.WriteFile(key, buf.Bytes(), os.ModePerm)
+		assert.NoError(err)
+	}
+
+	options := NewOptions()
+	options.SetOptions(
+		".",
+		nil,
+		[]PrefixType{"test_"},
+		".",
+		true,
+		false,
+		false,
+		[]FileType{FileGo},
+	)
+
+	err := GoConcat(options)
+	assert.NoError(err)
+
+	mockFilePaths := []string{"test.go"}
+
+	files, parsedFileSet, err := ParseASTFiles(mockFilePaths)
+	assert.NoError(err)
+
+	var buf bytes.Buffer
+	err = format.Node(&buf, parsedFileSet, files[0])
+	assert.NoError(err)
+
+	DeleteFiles(mockFilePaths)
+
+	expectedResult := "package test\n\nvar (\n\tfoo string\n\tbar string\n)\n"
+
+	assert.Equal(expectedResult, buf.String())
+}
 
 func TestGetDestinationPath(t *testing.T) {
 	assert := assert.New(t)
@@ -190,4 +250,82 @@ func TestConcatSpecs(t *testing.T) {
 	}
 
 	assert.Equal([]string{"\"ast\"", "\"token\""}, importValues)
+}
+
+func TestRemoveDecl(t *testing.T) {
+	assert := assert.New(t)
+	var decls []ast.Decl
+
+	funcs := []*ast.FuncDecl{
+		{
+			Name: &ast.Ident{
+				Name: "test1",
+			},
+		},
+		{
+			Name: &ast.Ident{
+				Name: "test2",
+			},
+		},
+	}
+
+	for _, f := range funcs {
+		decls = append(decls, f)
+	}
+
+	file := &ast.File{
+		Decls: decls,
+	}
+
+	removeDecl(file, []int{0, 1})
+
+	var funcNames []string
+	for _, decl := range file.Decls {
+		switch f := decl.(type) {
+		case *ast.FuncDecl:
+			funcNames = append(funcNames, f.Name.Name)
+		}
+	}
+
+	assert.Equal([]string{"test1"}, funcNames)
+}
+
+func TestGetFuncDeclFromFiles(t *testing.T) {
+	assert := assert.New(t)
+	var mockDecls []ast.Decl
+
+	mockFuncs := []*ast.FuncDecl{
+		{
+			Name: &ast.Ident{
+				Name: "test1",
+			},
+		},
+		{
+			Name: &ast.Ident{
+				Name: "test2",
+			},
+		},
+	}
+
+	for _, f := range mockFuncs {
+		mockDecls = append(mockDecls, f)
+	}
+
+	mockFile := []*ast.File{
+		{
+			Decls: mockDecls,
+		},
+	}
+
+	decl := getFuncDeclFromFiles(mockFile)
+
+	var funcNames []string
+	for _, decl := range decl {
+		switch f := decl.(type) {
+		case *ast.FuncDecl:
+			funcNames = append(funcNames, f.Name.Name)
+		}
+	}
+
+	assert.Equal([]string{"test1", "test2"}, funcNames)
 }
