@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/adavila0703/goconcat/goconcat"
+	"github.com/adavila0703/goconcat"
 	"github.com/urfave/cli/v2"
 )
 
@@ -71,18 +71,18 @@ var (
 
 func simpleConcat(c *cli.Context) error {
 	rootPath := c.Args().Get(0)
-	ignoredDirectories := goconcat.StringToType[goconcat.Directory](
+	ignoredDirectories := stringToType[goconcat.Directory](
 		strings.Split(c.Args().Get(1), ","),
 	)
 
-	filePrefix := goconcat.StringToType[goconcat.PrefixType](
+	filePrefix := stringToType[goconcat.PrefixType](
 		strings.Split(c.Args().Get(2), ","),
 	)
 
 	destination := c.Args().Get(3)
 	deleteOldFiles, err := strconv.ParseBool(c.Args().Get(4))
 	if err != nil {
-		log.Fatal(goconcat.ErrBoolCouldNotBeParsed)
+		log.Fatal("error: bool could not be parsed")
 	}
 
 	fileTypes := []goconcat.FileType{
@@ -112,12 +112,12 @@ func simpleConcat(c *cli.Context) error {
 func jsonConcat(c *cli.Context) error {
 	jsonFilePath := c.Args().Get(0)
 	if jsonFilePath == "" {
-		log.Fatal(goconcat.ErrNoFilePathForJson)
+		log.Fatal("error: json does not exist")
 	}
 
 	options := goconcat.NewOptions()
 
-	options.AddJsonSettings(jsonFilePath)
+	options.SetJsonSettings(jsonFilePath)
 
 	options.FileType = append(options.FileType, goconcat.FileGo)
 
@@ -126,6 +126,20 @@ func jsonConcat(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+type tSlice interface {
+	~string
+}
+
+func stringToType[T tSlice](slice []string) []T {
+	var newDirectories []T
+
+	for _, s := range slice {
+		newDirectories = append(newDirectories, T(s))
+	}
+
+	return newDirectories
 }
 
 func main() {
