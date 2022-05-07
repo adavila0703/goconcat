@@ -346,25 +346,6 @@ func TestConcatFiles_Func(t *testing.T) {
 	assert.Equal(expectedOutput.String(), outPut.String())
 }
 
-func TestGetFilePaths(t *testing.T) {
-	assert := assert.New(t)
-	filePaths, err := GetFilePaths(
-		".",
-		[]Directory{
-			DirectoryGit,
-		},
-		[]FileType{
-			FileGo,
-		},
-		[]PrefixType{
-			PrefixMockery,
-		},
-	)
-	assert.NoError(err)
-
-	fmt.Println(filePaths)
-}
-
 func TestDeleteFiles(t *testing.T) {
 	assert := assert.New(t)
 	mockContent := `package main`
@@ -382,5 +363,9 @@ func TestDeleteFiles(t *testing.T) {
 }
 
 func TestGetFilesToSort(t *testing.T) {
+
+}
+
+func TestGetFilePaths(t *testing.T) {
 
 }
