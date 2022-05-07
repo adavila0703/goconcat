@@ -96,10 +96,10 @@ func getDestinationPath(
 }
 
 func validateOptions(options *Options) error {
-	if options.FileType == nil {
+	if len(options.FileType) == 0 {
 		options.FileType = []FileType{FileGo}
 	} else if options.RootPath == "" {
-		errors.WithStack(errNoRootPath)
+		return errors.WithStack(errNoRootPath)
 	} else if len(options.FilePrefix) < 1 {
 		return errors.WithStack(errNoPrefix)
 	}

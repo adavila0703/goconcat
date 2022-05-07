@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -99,11 +100,55 @@ func TestGetDestinationPath_MockeryDestination_NoPath(t *testing.T) {
 
 func TestValidateOptions(t *testing.T) {
 	assert := assert.New(t)
-	options := NewOptions()
 
-	err := validateOptions(options)
-	assert.NoError(err)
-	assert.Equal(FileGo, options.FileType[0])
+	tests := []struct {
+		name        string
+		options     *Options
+		wantErr     error
+		wantOptions *Options
+	}{
+		{
+			name:    "no file type",
+			options: &Options{},
+			wantErr: nil,
+			wantOptions: &Options{
+				FileType: []FileType{
+					FileGo,
+				},
+			},
+		},
+		{
+			name: "fail root path",
+			options: &Options{
+				FileType: []FileType{
+					FileGo,
+				},
+			},
+			wantErr: errors.WithStack(errNoRootPath),
+		},
+		{
+			name: "fail no prefix",
+			options: &Options{
+				FileType: []FileType{
+					FileGo,
+				},
+				RootPath: ".",
+			},
+			wantErr: errors.WithStack(errNoPrefix),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateOptions(tt.options)
+			if err != nil {
+				assert.Equal(tt.wantErr.Error(), err.Error())
+			} else {
+				assert.Equal(nil, err)
+				assert.Equal(tt.options, tt.wantOptions)
+			}
+		})
+	}
 }
 
 func TestConcatImports(t *testing.T) {
