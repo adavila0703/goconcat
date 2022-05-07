@@ -117,7 +117,7 @@ func jsonConcat(c *cli.Context) error {
 
 	options := goconcat.NewOptions()
 
-	options.SetJSONSettings(jsonFilePath)
+	options.SetJSONOptions(jsonFilePath)
 
 	options.FileType = append(options.FileType, goconcat.FileGo)
 

@@ -11,7 +11,7 @@ func TestSetJSONSettings(t *testing.T) {
 
 	options := NewOptions()
 
-	err := options.SetJSONSettings("optionsExample.json")
+	err := options.SetJSONOptions("optionsExample.json")
 	assert.NoError(err)
 
 	assert.Equal(".", options.RootPath)

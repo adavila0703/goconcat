@@ -44,7 +44,7 @@ import "github.com/adavila0703/goconcat"
 
 func main() {
     options := goconcat.NewOptions()
-    options.SetJsonSettings("options.json")
+    options.SetJSONOptions("options.json")
     goconcat.GoConcat(options)
 }
 ```

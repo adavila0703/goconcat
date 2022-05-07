@@ -22,7 +22,7 @@ func NewOptions() *Options {
 	return &Options{}
 }
 
-func (o *Options) SetJSONSettings(jsonFilePath string) error {
+func (o *Options) SetJSONOptions(jsonFilePath string) error {
 	file, err := ioutil.ReadFile(jsonFilePath)
 	if err != nil {
 		return errors.WithStack(err)
