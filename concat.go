@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/format"
-	"go/parser"
 	"go/token"
 	"io/ioutil"
 	"os"
@@ -15,9 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func GoConcat(
-	options *Options,
-) error {
+func GoConcat(options *Options) error {
 	err := validateOptions(options)
 	if err != nil {
 		return errors.WithStack(err)
@@ -33,21 +30,9 @@ func GoConcat(
 		return errors.WithStack(err)
 	}
 
-	var filesToConcat []*ast.File
-	fileSet := token.NewFileSet()
-
-	for _, path := range filePaths {
-		fileContents, err := ioutil.ReadFile(path)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		astFiles, err := parser.ParseFile(fileSet, "", fileContents, 0)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		filesToConcat = append(filesToConcat, astFiles)
+	filesToConcat, fileSet, err := ParseASTFiles(filePaths)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 
 	filesToSort, err := GetFilesToSort(filesToConcat, options, fileSet)
@@ -61,8 +46,8 @@ func GoConcat(
 			return errors.WithStack(err)
 		}
 
-		des := AnyToString(options.Destination)
-		isValid := DestinationDirIsValid(options.RootPath, des)
+		des := anyToString(options.Destination)
+		isValid := destinationDirIsValid(options.RootPath, des)
 
 		if !isValid && !options.MockeryDestination {
 			if err := os.Mkdir(des, os.ModePerm); err != nil {
@@ -70,7 +55,7 @@ func GoConcat(
 			}
 		}
 
-		finalPath := GetDestinationPath(des, file.Name.Name, FileGo, options, filePaths)
+		finalPath := getDestinationPath(des, file.Name.Name, FileGo, options, filePaths)
 
 		if err := ioutil.WriteFile(finalPath, buf.Bytes(), os.ModePerm); err != nil {
 			return errors.WithStack(err)
@@ -86,49 +71,14 @@ func GoConcat(
 	return nil
 }
 
-func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet) ([]*ast.File, error) {
-	var filesToSort []*ast.File
-
-	if options.ConcatPackages {
-		filePackageMap := make(map[string][]*ast.File)
-
-		for _, file := range files {
-			packageName := file.Name.Name
-
-			if _, ok := filePackageMap[packageName]; !ok {
-				filePackageMap[packageName] = []*ast.File{file}
-			} else {
-				filePackageMap[packageName] = append(filePackageMap[packageName], file)
-			}
-		}
-
-		for _, files := range filePackageMap {
-			concatFiles, err := ConcatFiles(files, fileSet)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-			filesToSort = append(filesToSort, concatFiles)
-		}
-
-	} else {
-		concatFiles, err := ConcatFiles(files, fileSet)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		filesToSort = append(filesToSort, concatFiles)
-	}
-
-	return filesToSort, nil
-}
-
-func GetDestinationPath(
+func getDestinationPath(
 	destination string,
 	packageName string,
 	fileType FileType,
 	options *Options,
 	filePaths []string,
 ) string {
-	file := AnyToString(fileType)
+	file := anyToString(fileType)
 
 	if options.MockeryDestination {
 		findPackage := regexp.MustCompile(packageName)
@@ -144,7 +94,7 @@ func GetDestinationPath(
 			return packageName + "/" + fmt.Sprintf("mocks_%s", packageName) + file
 		}
 
-		return splitPath[0] + "/" + fmt.Sprintf("mocks_%s", packageName) + file
+		return splitPath[0] + packageName + "/" + fmt.Sprintf("mocks_%s", packageName) + file
 	}
 
 	return "./" + destination + "/" + packageName + file
@@ -156,4 +106,89 @@ func validateOptions(options *Options) error {
 	}
 
 	return nil
+}
+
+func concatImports(targetFile *ast.File, fileSet *token.FileSet, importStrings []string) {
+	existingImports := make(map[string]string)
+
+	for _, v := range targetFile.Imports {
+		existingImports[v.Path.Value] = v.Path.Value
+	}
+
+	for _, importString := range importStrings {
+		// skip import if it already exists
+		if _, ok := existingImports[importString]; ok {
+			continue
+		}
+		addImportToTargetFile(targetFile, importString)
+	}
+	ast.SortImports(fileSet, targetFile)
+}
+
+func addImportToTargetFile(targetFile *ast.File, target string) {
+	for _, decl := range targetFile.Decls {
+		switch decl.(type) {
+		case *ast.GenDecl:
+			genDecl := decl.(*ast.GenDecl)
+
+			if genDecl.Tok == token.IMPORT {
+				spec := &ast.ImportSpec{
+					Path: &ast.BasicLit{
+						Value: target,
+					},
+				}
+				genDecl.Specs = append(genDecl.Specs, spec)
+			}
+		}
+	}
+}
+
+func getSpecsAndIndices(file *ast.File, tok token.Token) (specs []ast.Spec, declIndex []int) {
+	for index, decl := range file.Decls {
+		switch decl.(type) {
+		case *ast.GenDecl:
+			genDecl := decl.(*ast.GenDecl)
+			if genDecl.Tok == tok {
+				declIndex = append(declIndex, index)
+				specs = append(specs, genDecl.Specs...)
+			}
+		}
+	}
+
+	return specs, declIndex
+}
+
+func concatSpecs(file *ast.File, specs []ast.Spec, tok token.Token) {
+	for _, decl := range file.Decls {
+		switch decl.(type) {
+		case *ast.GenDecl:
+			genDecl := decl.(*ast.GenDecl)
+			if genDecl.Tok == tok {
+				genDecl.Specs = append(genDecl.Specs, specs...)
+			}
+		}
+	}
+}
+
+// removes decl from ast file
+func removeDecl(file *ast.File, indices []int) {
+	// get the first index of decl as the base decl
+	indices = removeFromSlice(indices, 0)
+	file.Decls = returnAllButIndices(file.Decls, indices)
+}
+
+func getFuncDeclFromFiles(files []*ast.File) []ast.Decl {
+	var funcs []ast.Decl
+
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			switch decl.(type) {
+			case *ast.FuncDecl:
+				funcDecl := decl.(*ast.FuncDecl)
+				funcs = append(funcs, funcDecl)
+			}
+		}
+	}
+
+	return funcs
 }

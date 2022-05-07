@@ -2,8 +2,10 @@ package goconcat
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,52 +31,39 @@ func ConcatFiles(files []*ast.File, fileSet *token.FileSet) (*ast.File, error) {
 		}
 	}
 
-	ConcatImports(targetFile, fileSet, importsToAdd)
+	concatImports(targetFile, fileSet, importsToAdd)
 
 	// concat all types
 	for _, file := range leftOverFiles {
 		var tok token.Token
 
 		tok = token.VAR
-		spec, _ := GetSpecsAndIndices(file, tok)
-		AddSpecToTargetFile(targetFile, spec, tok)
+		spec, _ := getSpecsAndIndices(file, tok)
+		addSpecToTargetFile(targetFile, spec, tok)
 
 		tok = token.CONST
-		spec, _ = GetSpecsAndIndices(file, tok)
-		AddSpecToTargetFile(targetFile, spec, tok)
+		spec, _ = getSpecsAndIndices(file, tok)
+		addSpecToTargetFile(targetFile, spec, tok)
 
 		tok = token.TYPE
-		spec, _ = GetSpecsAndIndices(file, tok)
-		AddSpecToTargetFile(targetFile, spec, tok)
+		spec, _ = getSpecsAndIndices(file, tok)
+		addSpecToTargetFile(targetFile, spec, tok)
 	}
 
-	funcs := GetFuncDeclFromFiles(leftOverFiles)
+	funcs := getFuncDeclFromFiles(leftOverFiles)
 
 	targetFile.Decls = append(targetFile.Decls, funcs...)
 
 	return targetFile, nil
 }
 
-func concatenateTargetFile(file *ast.File) {
-	tokens := []token.Token{
-		token.VAR,
-		token.CONST,
-		token.TYPE,
+func DeleteFiles(filePaths []string) error {
+	for _, file := range filePaths {
+		if err := os.Remove(file); err != nil {
+			return errors.WithStack(err)
+		}
 	}
-
-	for _, token := range tokens {
-		concatType(file, token)
-	}
-}
-
-func concatType(file *ast.File, tok token.Token) {
-	specs, indices := GetSpecsAndIndices(file, tok)
-
-	specs = RemoveFromSlice(specs, 0)
-
-	RemoveDecl(file, indices)
-
-	ConcatSpecs(file, specs, tok)
+	return nil
 }
 
 func GetFilePaths(
@@ -117,10 +106,89 @@ func GetFilePaths(
 	})
 
 	if len(filePaths) < 1 {
-		return nil, errors.WithStack(ErrNoFilesDetected)
+		return nil, errors.WithStack(errNoFilesDetected)
 	}
 
 	return filePaths, nil
+}
+
+func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet) ([]*ast.File, error) {
+	var filesToSort []*ast.File
+
+	if options.ConcatPackages {
+		filePackageMap := make(map[string][]*ast.File)
+
+		for _, file := range files {
+			packageName := file.Name.Name
+
+			if _, ok := filePackageMap[packageName]; !ok {
+				filePackageMap[packageName] = []*ast.File{file}
+			} else {
+				filePackageMap[packageName] = append(filePackageMap[packageName], file)
+			}
+		}
+
+		for _, files := range filePackageMap {
+			concatFiles, err := ConcatFiles(files, fileSet)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			filesToSort = append(filesToSort, concatFiles)
+		}
+
+	} else {
+		concatFiles, err := ConcatFiles(files, fileSet)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		filesToSort = append(filesToSort, concatFiles)
+	}
+
+	return filesToSort, nil
+}
+
+// parse a list of file paths to get ast files
+func ParseASTFiles(filePaths []string) ([]*ast.File, *token.FileSet, error) {
+	var filesToConcat []*ast.File
+	fileSet := token.NewFileSet()
+
+	for _, path := range filePaths {
+		fileContents, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, nil, errors.WithStack(err)
+		}
+
+		astFiles, err := parser.ParseFile(fileSet, "", fileContents, 0)
+		if err != nil {
+			return nil, nil, errors.WithStack(err)
+		}
+
+		filesToConcat = append(filesToConcat, astFiles)
+	}
+
+	return filesToConcat, fileSet, nil
+}
+
+func concatenateTargetFile(file *ast.File) {
+	tokens := []token.Token{
+		token.VAR,
+		token.CONST,
+		token.TYPE,
+	}
+
+	for _, token := range tokens {
+		concatType(file, token)
+	}
+}
+
+func concatType(file *ast.File, tok token.Token) {
+	specs, indices := getSpecsAndIndices(file, tok)
+
+	specs = removeFromSlice(specs, 0)
+
+	removeDecl(file, indices)
+
+	concatSpecs(file, specs, tok)
 }
 
 func removeASTFileByIndex(files []*ast.File, fileIndex int) (targetFile *ast.File, leftOverFiles []*ast.File) {
@@ -136,7 +204,7 @@ func removeASTFileByIndex(files []*ast.File, fileIndex int) (targetFile *ast.Fil
 
 func checkDirectoryIgnore(path string, ignoredDirectories []Directory) bool {
 	for _, ignoreDirectory := range ignoredDirectories {
-		directory := AnyToString(ignoreDirectory)
+		directory := anyToString(ignoreDirectory)
 		if strings.Contains(path, directory) {
 			return true
 		}
@@ -144,11 +212,11 @@ func checkDirectoryIgnore(path string, ignoredDirectories []Directory) bool {
 	return false
 }
 
-type Specs interface {
+type specs interface {
 	[]ast.Spec
 }
 
-func AddSpecToTargetFile[T Specs](targetFile *ast.File, spec T, tok token.Token) {
+func addSpecToTargetFile[T specs](targetFile *ast.File, spec T, tok token.Token) {
 	for _, decl := range targetFile.Decls {
 		switch decl.(type) {
 		case *ast.GenDecl:
@@ -166,7 +234,7 @@ func getSuffixFileType(fileName string) FileType {
 
 func containsPrefix(info fs.FileInfo, prefix []PrefixType) bool {
 	for _, p := range prefix {
-		sPrefix := AnyToString(p)
+		sPrefix := anyToString(p)
 		if strings.HasPrefix(info.Name(), sPrefix) {
 			return true
 		}
@@ -174,17 +242,8 @@ func containsPrefix(info fs.FileInfo, prefix []PrefixType) bool {
 	return false
 }
 
-func DeleteFiles(filePaths []string) error {
-	for _, file := range filePaths {
-		if err := os.Remove(file); err != nil {
-			return errors.WithStack(err)
-		}
-	}
-	return nil
-}
-
-func DestinationDirIsValid(rootPath string, destination string) bool {
-	des := AnyToString(destination)
+func destinationDirIsValid(rootPath string, destination string) bool {
+	des := anyToString(destination)
 	dirIsValid := false
 
 	filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {

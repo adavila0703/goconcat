@@ -1,7 +1,7 @@
 package goconcat
 
 // removes index and returns new slice
-func RemoveFromSlice[T any](slice []T, index int) (poppedSlice []T) {
+func removeFromSlice[T any](slice []T, index int) (poppedSlice []T) {
 	for i, s := range slice {
 		if i == index {
 			continue
@@ -12,7 +12,7 @@ func RemoveFromSlice[T any](slice []T, index int) (poppedSlice []T) {
 }
 
 // return index from slice
-func PopFromSlice[T any](slice []T, index int) (singleElement T) {
+func popFromSlice[T any](slice []T, index int) (singleElement T) {
 	for i, s := range slice {
 		if index == i {
 			singleElement = s
@@ -22,7 +22,7 @@ func PopFromSlice[T any](slice []T, index int) (singleElement T) {
 }
 
 // return index from slice
-func ReturnAllButIndices[T any](slices []T, indices []int) (newSlice []T) {
+func returnAllButIndices[T any](slices []T, indices []int) (newSlice []T) {
 	ignoredIndex := make(map[int]int)
 
 	// map slice of ints
@@ -40,19 +40,19 @@ func ReturnAllButIndices[T any](slices []T, indices []int) (newSlice []T) {
 	return
 }
 
-type StringConvert interface {
+type stringConvert interface {
 	~string
 }
 
-func AnyToString[T StringConvert](s T) string {
+func anyToString[T stringConvert](s T) string {
 	return string(s)
 }
 
-type TSlice interface {
+type tSlice interface {
 	~string
 }
 
-func StringToType[T TSlice](slice []string) []T {
+func stringToType[T tSlice](slice []string) []T {
 	var newDirectories []T
 
 	for _, s := range slice {
