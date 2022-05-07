@@ -354,12 +354,11 @@ func TestDeleteFiles(t *testing.T) {
 	assert.NoError(err)
 
 	mockFilePath := []string{"test.go"}
-	expectedErr := "open test.go: The system cannot find the file specified."
 
 	DeleteFiles(mockFilePath)
 
 	_, _, err = ParseASTFiles(mockFilePath)
-	assert.Equal(expectedErr, err.Error())
+	assert.Error(err)
 }
 
 func TestGetFilesToSort(t *testing.T) {
