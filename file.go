@@ -1,7 +1,9 @@
 package goconcat
 
 import (
+	"bytes"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/token"
 	"io/fs"
@@ -171,6 +173,17 @@ func ParseASTFiles(filePaths []string) ([]*ast.File, *token.FileSet, error) {
 	}
 
 	return filesToConcat, fileSet, nil
+}
+
+func WriteASTFile(file *ast.File, fileSet *token.FileSet, filePath string) error {
+	var buf bytes.Buffer
+	if err := format.Node(&buf, fileSet, file); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := ioutil.WriteFile(filePath, buf.Bytes(), os.ModePerm); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }
 
 func concatenateTargetFile(file *ast.File) {
