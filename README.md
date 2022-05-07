@@ -4,7 +4,7 @@
 [![Code Coverage](https://codecov.io/gh/adavila0703/goconcat/branch/main/graph/badge.svg)](https://app.codecov.io/gh/adavila0703/goconcat)
 [![Go Report Card](https://goreportcard.com/badge/github.com/salesloft/gorollout)](https://goreportcard.com/report/github.com/adavila0703/goconcat)
 
-> Goconcat was originally developed as a tool to consolidate mock files which were generated from mockery. Since mockery's update to this issue, Goconcat has been converted to a general purpose file consolidation tool.
+> Goconcat was originally developed as a tool to concatenate mock files which were generated from mockery. Since mockery's has since patched this issue, Goconcat has been converted to a general purpose Go file consolidation tool.
 
 ![goconcat](./images/goconcat.png)
 
