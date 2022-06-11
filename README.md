@@ -1,8 +1,8 @@
 # Goconcat
 
-[![](https://godoc.org/github.com/salesloft/gorollout?status.svg)](http://godoc.org/github.com/adavila0703/goconcat)
+[![](https://godoc.org/github.com/adavila0703/goconcat?status.svg)](http://godoc.org/github.com/adavila0703/goconcat)
 [![Code Coverage](https://codecov.io/gh/adavila0703/goconcat/branch/main/graph/badge.svg)](https://app.codecov.io/gh/adavila0703/goconcat)
-[![Go Report Card](https://goreportcard.com/badge/github.com/salesloft/gorollout)](https://goreportcard.com/report/github.com/adavila0703/goconcat)
+[![Go Report Card](https://goreportcard.com/badge/github.com/adavila0703/goconcat)](https://goreportcard.com/report/github.com/adavila0703/goconcat)
 
 > Goconcat was originally developed as a tool to consolidate mock files which were generated from mockery. Since mockery's update to this issue, Goconcat has been converted to a general purpose file consolidation tool.
 
