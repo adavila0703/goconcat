@@ -249,6 +249,10 @@ func getSuffixFileType(fileName string) FileType {
 }
 
 func containsPrefix(info fs.FileInfo, prefix []PrefixType) bool {
+	if prefix == nil {
+		return true
+	}
+
 	for _, p := range prefix {
 		sPrefix := anyToString(p)
 		if strings.HasPrefix(info.Name(), sPrefix) {

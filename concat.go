@@ -100,7 +100,7 @@ func validateOptions(options *Options) error {
 		options.FileType = []FileType{FileGo}
 	} else if options.RootPath == "" {
 		return errors.WithStack(errNoRootPath)
-	} else if len(options.FilePrefix) < 1 {
+	} else if len(options.FilePrefix) < 1 && options.FilePrefix != nil {
 		return errors.WithStack(errNoPrefix)
 	}
 

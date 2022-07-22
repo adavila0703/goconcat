@@ -1,7 +1,7 @@
 {
   "rootPath": ".",
   "ignoredDirectories": ["dir1", "dir2"],
-  "filePrefix": ["mocks_", "mock_"],
+  "filePrefix": null,
   "destination": "newdir",
   "deleteOldFiles": true,
   "concatPkg": false
