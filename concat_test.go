@@ -132,7 +132,8 @@ func TestValidateOptions(t *testing.T) {
 				FileType: []FileType{
 					FileGo,
 				},
-				RootPath: ".",
+				RootPath:   ".",
+				FilePrefix: []PrefixType{},
 			},
 			wantErr: errors.WithStack(errNoPrefix),
 		},
