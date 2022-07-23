@@ -15,14 +15,27 @@ import (
 	"github.com/pkg/errors"
 )
 
+type ConcatOptions struct {
+	customPackageName bool
+	packageName       string
+}
+
 // concatenates all ast files
-func ConcatFiles(files []*ast.File, fileSet *token.FileSet) (*ast.File, error) {
+// if no concat options pass in nil
+func ConcatFiles(files []*ast.File, fileSet *token.FileSet, concatOptions *ConcatOptions) (*ast.File, error) {
 	targetFile, leftOverFiles := removeASTFileByIndex(files, 0)
 	if len(leftOverFiles) < 1 {
 		return targetFile, nil
 	}
 
-	// concat targetfile
+	// set package name for final file
+	if concatOptions != nil {
+		if concatOptions.customPackageName {
+			targetFile.Name.Name = concatOptions.packageName
+		}
+	}
+
+	// concat target file
 	concatenateTargetFile(targetFile)
 
 	var importsToAdd []string
@@ -75,18 +88,22 @@ func GetFilePaths(options *Options) ([]string, error) {
 		fileTypeMap[fileType] = fileType
 	}
 
-	filepath.Walk(options.RootPath, func(path string, info fs.FileInfo, err error) error {
+	filepath.Walk(options.RootPath, func(path string, fileInfo fs.FileInfo, err error) error {
+		if fileInfo.Name() == mainFile {
+			return nil
+		}
+
 		if checkDirectoryIgnore(path, options.IgnoredDirectories) {
 			return nil
 		}
 
-		if !info.IsDir() {
-			suffix := getSuffixFileType(info.Name())
+		if !fileInfo.IsDir() {
+			suffix := getSuffixFileType(fileInfo.Name())
 			if _, ok := fileTypeMap[suffix]; !ok {
 				return nil
 			}
 
-			hasPrefix := containsPrefix(info, options.FilePrefix)
+			hasPrefix := containsPrefix(fileInfo, options.FilePrefix)
 
 			if !hasPrefix {
 				return nil
@@ -113,11 +130,11 @@ func DeleteFiles(filePaths []string) error {
 	return nil
 }
 
-// can return single ast file or list of files depending if you want to sort by package
-func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet) ([]*ast.File, error) {
+// allows a return of a single ast file or list of files depending if you want to sort by package
+func getFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet) ([]*ast.File, error) {
 	var filesToSort []*ast.File
 
-	if options.ConcatPackages {
+	if options.SplitFilesByPackage {
 		filePackageMap := make(map[string][]*ast.File)
 
 		for _, file := range files {
@@ -131,14 +148,19 @@ func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet)
 		}
 
 		for _, files := range filePackageMap {
-			concatFiles, err := ConcatFiles(files, fileSet)
+			concatFiles, err := ConcatFiles(files, fileSet, nil)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
 			filesToSort = append(filesToSort, concatFiles)
 		}
 	} else {
-		file, err := ConcatFiles(files, fileSet)
+		concatOptions := &ConcatOptions{
+			customPackageName: true,
+			packageName:       goconcat,
+		}
+
+		file, err := ConcatFiles(files, fileSet, concatOptions)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -262,13 +284,18 @@ func containsPrefix(info fs.FileInfo, prefix []PrefixType) bool {
 	return false
 }
 
-func destinationDirIsValid(rootPath string, destination string) bool {
-	des := anyToString(destination)
+func destinationDirIsValid(rootPath string, destinationPath string) bool {
+	var directoryName string
+	if splitDestination := strings.Split(destinationPath, "/"); len(splitDestination) > 0 {
+		directoryName = splitDestination[len(splitDestination)-1]
+	} else {
+		directoryName = destinationPath
+	}
 	dirIsValid := false
 
-	filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
+	filepath.Walk(rootPath, func(_ string, info fs.FileInfo, _ error) error {
 		if info.IsDir() {
-			if info.Name() == des {
+			if info.Name() == directoryName {
 				dirIsValid = true
 			}
 		}

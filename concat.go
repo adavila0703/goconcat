@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"go/token"
 	"io/ioutil"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -17,48 +18,80 @@ import (
 func GoConcat(options *Options) error {
 	err := validateOptions(options)
 	if err != nil {
+		log.Println(err)
 		return errors.WithStack(err)
 	}
 
 	filePaths, err := GetFilePaths(options)
 	if err != nil {
+		log.Println(err)
 		return errors.WithStack(err)
 	}
 
 	filesToConcat, fileSet, err := ParseASTFiles(filePaths)
 	if err != nil {
+		log.Println(err)
 		return errors.WithStack(err)
 	}
 
-	filesToSort, err := GetFilesToSort(filesToConcat, options, fileSet)
+	filesToSort, err := getFilesToSort(filesToConcat, options, fileSet)
 	if err != nil {
+		log.Println(err)
 		return errors.WithStack(err)
 	}
 
 	for _, file := range filesToSort {
+		originialPackage := file.Name.Name
+		destinationPath := anyToString(options.Destination)
+
+		if destinationPath == rootDirectory {
+			destinationPath = goconcat
+		}
+
+		var pkgName string
+
+		if splitStrings := strings.Split(destinationPath, "/"); len(splitStrings) > 0 {
+			pkgName = splitStrings[len(splitStrings)-1]
+		} else {
+			pkgName = destinationPath
+		}
+
+		file.Name.Name = pkgName
+
 		var buf bytes.Buffer
 		if err := format.Node(&buf, fileSet, file); err != nil {
+			log.Println(err)
 			return errors.WithStack(err)
 		}
 
-		des := anyToString(options.Destination)
-		isValid := destinationDirIsValid(options.RootPath, des)
+		isValid := destinationDirIsValid(options.RootPath, destinationPath)
 
-		if !isValid && !options.MockeryDestination {
-			if err := os.Mkdir(des, os.ModePerm); err != nil {
+		if !isValid {
+			if err := os.Mkdir(destinationPath, os.ModePerm); err != nil {
+				log.Println(err)
 				return errors.WithStack(err)
 			}
 		}
 
-		finalPath := getDestinationPath(des, file.Name.Name, FileGo, options, filePaths)
+		var fileName string
+
+		if !options.SplitFilesByPackage {
+			fileName = goconcat
+		} else {
+			fileName = originialPackage
+		}
+
+		finalPath := getDestinationPath(destinationPath, file.Name.Name, FileGo, options, filePaths, fileName)
 
 		if err := ioutil.WriteFile(finalPath, buf.Bytes(), os.ModePerm); err != nil {
+			log.Println(err)
 			return errors.WithStack(err)
 		}
 	}
 
 	if options.DeleteOldFiles {
 		if err := DeleteFiles(filePaths); err != nil {
+			log.Println(err)
 			return errors.WithStack(err)
 		}
 	}
@@ -72,6 +105,7 @@ func getDestinationPath(
 	fileType FileType,
 	options *Options,
 	filePaths []string,
+	fileName string,
 ) string {
 	file := anyToString(fileType)
 
@@ -92,15 +126,19 @@ func getDestinationPath(
 		return splitPath[0] + packageName + "/" + fmt.Sprintf("mocks_%s", packageName) + file
 	}
 
+	if options.SplitFilesByPackage {
+		return "./" + destination + "/" + fileName + file
+	}
+
 	return "./" + destination + "/" + packageName + file
 }
 
 func validateOptions(options *Options) error {
-	if len(options.FileType) == 0 {
-		options.FileType = []FileType{FileGo}
-	} else if options.RootPath == "" {
+	if options.RootPath == "" {
 		return errors.WithStack(errNoRootPath)
-	} else if len(options.FilePrefix) < 1 && options.FilePrefix != nil {
+	}
+
+	if options.FilePrefix != nil && len(options.FilePrefix) < 1 {
 		return errors.WithStack(errNoPrefix)
 	}
 

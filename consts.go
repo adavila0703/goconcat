@@ -8,18 +8,21 @@ type Destination string
 const (
 	// file types
 	FileGo         FileType = ".go"
-	FilePython     FileType = ".py"
-	FileGit        FileType = ".git"
-	FileJavaScript FileType = ".js"
-	FileTypeScript FileType = ".ts"
+	fileGit        FileType = ".git"
+	fileJavaScript FileType = ".js"
+	fileTypeScript FileType = ".ts"
 
 	// prefix type
-	PrefixMockery  PrefixType = "mock_"
-	PrefixGoconcat PrefixType = "mocks_"
+	prefixMockery  PrefixType = "mock_"
+	prefixGoconcat PrefixType = "mocks_"
 
 	// directories
-	DirectoryGit Directory = ".git"
+	girectoryGit Directory = ".git"
 
 	// destination directories
-	DestinationMockery Destination = "mockery"
+	destinationMockery Destination = "mockery"
+
+	mainFile      string = "main.go"
+	rootDirectory string = "."
+	goconcat      string = "goconcat"
 )

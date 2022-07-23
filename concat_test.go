@@ -2,6 +2,7 @@ package goconcat
 
 import (
 	"bytes"
+	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -47,14 +48,12 @@ func TestGoConcat(t *testing.T) {
 		".",
 		true,
 		false,
-		false,
-		[]FileType{FileGo},
 	)
 
 	err := GoConcat(options)
 	assert.NoError(err)
 
-	mockFilePaths := []string{"test.go"}
+	mockFilePaths := []string{"./goconcat/goconcat.go"}
 
 	files, parsedFileSet, err := ParseASTFiles(mockFilePaths)
 	assert.NoError(err)
@@ -64,8 +63,10 @@ func TestGoConcat(t *testing.T) {
 	assert.NoError(err)
 
 	DeleteFiles(mockFilePaths)
+	err = os.Remove(goconcat)
+	assert.NoError(err)
 
-	expectedResult := "package test\n\nvar (\n\tfoo string\n\tbar string\n)\n"
+	expectedResult := "package goconcat\n\nvar (\n\tfoo string\n\tbar string\n)\n"
 
 	assert.Equal(expectedResult, buf.String())
 }
@@ -75,7 +76,7 @@ func TestGetDestinationPath(t *testing.T) {
 
 	mockOptions := NewOptions()
 
-	path := getDestinationPath("goconcat/test", "test", FileGo, mockOptions, []string{"goconcat/test/mock_file.go"})
+	path := getDestinationPath("goconcat/test", "test", FileGo, mockOptions, []string{"goconcat/test/mock_file.go"}, "")
 	assert.Equal("./goconcat/test/test.go", path)
 }
 func TestGetDestinationPath_MockeryDestination(t *testing.T) {
@@ -84,7 +85,7 @@ func TestGetDestinationPath_MockeryDestination(t *testing.T) {
 	mockOptions := NewOptions()
 	mockOptions.MockeryDestination = true
 
-	path := getDestinationPath(".", "test", FileGo, mockOptions, []string{"goconcat/test/mock_file.go"})
+	path := getDestinationPath(".", "test", FileGo, mockOptions, []string{"goconcat/test/mock_file.go"}, "")
 	assert.Equal("goconcat/test/mocks_test.go", path)
 }
 
@@ -94,7 +95,7 @@ func TestGetDestinationPath_MockeryDestination_NoPath(t *testing.T) {
 	mockOptions := NewOptions()
 	mockOptions.MockeryDestination = true
 
-	path := getDestinationPath(".", "test", FileGo, mockOptions, []string{"test/mock_file.go"})
+	path := getDestinationPath(".", "test", FileGo, mockOptions, []string{"test/mock_file.go"}, "")
 	assert.Equal("test/mocks_test.go", path)
 }
 
@@ -108,21 +109,12 @@ func TestValidateOptions(t *testing.T) {
 		wantOptions *Options
 	}{
 		{
-			name:    "no file type",
-			options: &Options{},
-			wantErr: nil,
-			wantOptions: &Options{
-				FileType: []FileType{
-					FileGo,
-				},
-			},
-		},
-		{
 			name: "fail root path",
 			options: &Options{
 				FileType: []FileType{
 					FileGo,
 				},
+				RootPath: "",
 			},
 			wantErr: errors.WithStack(errNoRootPath),
 		},
@@ -140,9 +132,10 @@ func TestValidateOptions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name, func(_ *testing.T) {
 			err := validateOptions(tt.options)
 			if err != nil {
+				fmt.Println("error", err.Error())
 				assert.Equal(tt.wantErr.Error(), err.Error())
 			} else {
 				assert.Equal(nil, err)

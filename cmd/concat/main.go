@@ -85,10 +85,6 @@ func simpleConcat(c *cli.Context) error {
 		log.Fatal("error: bool could not be parsed")
 	}
 
-	fileTypes := []goconcat.FileType{
-		goconcat.FileGo,
-	}
-
 	options := goconcat.NewOptions()
 
 	options.SetOptions(
@@ -98,8 +94,6 @@ func simpleConcat(c *cli.Context) error {
 		destination,
 		deleteOldFiles,
 		false,
-		false,
-		fileTypes,
 	)
 
 	if err := goconcat.GoConcat(options); err != nil {
