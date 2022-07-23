@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"go/token"
 	"io/ioutil"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -27,38 +28,57 @@ func GoConcat(options *Options) error {
 
 	filesToConcat, fileSet, err := ParseASTFiles(filePaths)
 	if err != nil {
+		log.Println(err)
 		return errors.WithStack(err)
 	}
 
 	filesToSort, err := GetFilesToSort(filesToConcat, options, fileSet)
 	if err != nil {
+		log.Println(err)
 		return errors.WithStack(err)
 	}
 
 	for _, file := range filesToSort {
 		var buf bytes.Buffer
 		if err := format.Node(&buf, fileSet, file); err != nil {
+			log.Println(err)
 			return errors.WithStack(err)
 		}
 
 		des := anyToString(options.Destination)
+
+		if des == rootDirectory {
+			des = goconcat
+		}
+
 		isValid := destinationDirIsValid(options.RootPath, des)
 
 		if !isValid && !options.MockeryDestination {
 			if err := os.Mkdir(des, os.ModePerm); err != nil {
+				log.Println(err)
 				return errors.WithStack(err)
 			}
 		}
 
-		finalPath := getDestinationPath(des, file.Name.Name, FileGo, options, filePaths)
+		var packageName string
+
+		if !options.ConcatPackages {
+			packageName = goconcat
+		} else {
+			packageName = file.Name.Name
+		}
+
+		finalPath := getDestinationPath(des, packageName, FileGo, options, filePaths)
 
 		if err := ioutil.WriteFile(finalPath, buf.Bytes(), os.ModePerm); err != nil {
+			log.Println(err)
 			return errors.WithStack(err)
 		}
 	}
 
 	if options.DeleteOldFiles {
 		if err := DeleteFiles(filePaths); err != nil {
+			log.Println(err)
 			return errors.WithStack(err)
 		}
 	}

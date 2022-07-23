@@ -22,4 +22,8 @@ const (
 
 	// destination directories
 	DestinationMockery Destination = "mockery"
+
+	mainFile      string = "main.go"
+	rootDirectory string = "."
+	goconcat      string = "goconcat"
 )
