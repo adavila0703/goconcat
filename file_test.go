@@ -2,7 +2,6 @@ package goconcat
 
 import (
 	"bytes"
-	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -27,7 +26,7 @@ func TestConcatFiles_OneFile(t *testing.T) {
 
 	mockFileSet := token.NewFileSet()
 
-	file, err := ConcatFiles(mockFiles, mockFileSet)
+	file, err := ConcatFiles(mockFiles, mockFileSet, nil)
 
 	assert.NoError(err)
 	assert.Equal(mockFiles[0], file)
@@ -73,7 +72,7 @@ func TestConcatFiles_Imports(t *testing.T) {
 		files = append(files, file)
 	}
 
-	concatFile, err := ConcatFiles(files, mockFileSet)
+	concatFile, err := ConcatFiles(files, mockFileSet, nil)
 	assert.NoError(err)
 
 	var output bytes.Buffer
@@ -131,7 +130,7 @@ func TestConcatFiles_Vars(t *testing.T) {
 		files = append(files, file)
 	}
 
-	concatFile, err := ConcatFiles(files, mockFileSet)
+	concatFile, err := ConcatFiles(files, mockFileSet, nil)
 	assert.NoError(err)
 
 	var output bytes.Buffer
@@ -189,7 +188,7 @@ func TestConcatFiles_Const(t *testing.T) {
 		files = append(files, file)
 	}
 
-	concatFile, err := ConcatFiles(files, mockFileSet)
+	concatFile, err := ConcatFiles(files, mockFileSet, nil)
 	assert.NoError(err)
 
 	var outPut bytes.Buffer
@@ -198,7 +197,6 @@ func TestConcatFiles_Const(t *testing.T) {
 	}
 
 	expectedFile, err := parser.ParseFile(mockFileSet, "", expectedFileContents, 0)
-	fmt.Println(err)
 	assert.NoError(err)
 
 	var expectedOutput bytes.Buffer
@@ -272,7 +270,7 @@ func TestConcatFiles_Types(t *testing.T) {
 		files = append(files, file)
 	}
 
-	concatFile, err := ConcatFiles(files, mockFileSet)
+	concatFile, err := ConcatFiles(files, mockFileSet, nil)
 	assert.NoError(err)
 
 	var outPut bytes.Buffer
@@ -346,7 +344,7 @@ func TestConcatFiles_Func(t *testing.T) {
 		files = append(files, file)
 	}
 
-	concatFile, err := ConcatFiles(files, mockFileSet)
+	concatFile, err := ConcatFiles(files, mockFileSet, nil)
 	assert.NoError(err)
 
 	var outPut bytes.Buffer
@@ -412,14 +410,14 @@ func TestGetFilesToSort(t *testing.T) {
 
 	options := NewOptions()
 
-	sortedFiles, err := GetFilesToSort(files, options, mockFileSet)
+	sortedFiles, err := getFilesToSort(files, options, mockFileSet)
 	assert.NoError(err)
 
 	var output bytes.Buffer
 	err = format.Node(&output, mockFileSet, sortedFiles[0])
 	assert.NoError(err)
 
-	assert.Equal("package test\n\nconst (\n\tname = \"name\"\n\tage  = 30\n)\n", output.String())
+	assert.Equal("package goconcat\n\nconst (\n\tname = \"name\"\n\tage  = 30\n)\n", output.String())
 
 }
 
@@ -454,9 +452,9 @@ func TestGetFilesToSort_ConcatPackages(t *testing.T) {
 	}
 
 	options := NewOptions()
-	options.ConcatPackages = true
+	options.SplitFilesByPackage = true
 
-	sortedFiles, err := GetFilesToSort(files, options, mockFileSet)
+	sortedFiles, err := getFilesToSort(files, options, mockFileSet)
 	assert.NoError(err)
 
 	var output bytes.Buffer
@@ -478,8 +476,6 @@ func TestGetFilePaths(t *testing.T) {
 		"",
 		false,
 		false,
-		false,
-		[]FileType{FileGo},
 	)
 
 	paths, err := GetFilePaths(options)

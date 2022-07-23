@@ -29,8 +29,10 @@ func ConcatFiles(files []*ast.File, fileSet *token.FileSet, concatOptions *Conca
 	}
 
 	// set package name for final file
-	if concatOptions.customPackageName {
-		targetFile.Name.Name = concatOptions.packageName
+	if concatOptions != nil {
+		if concatOptions.customPackageName {
+			targetFile.Name.Name = concatOptions.packageName
+		}
 	}
 
 	// concat target file
@@ -129,10 +131,10 @@ func DeleteFiles(filePaths []string) error {
 }
 
 // allows a return of a single ast file or list of files depending if you want to sort by package
-func GetFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet) ([]*ast.File, error) {
+func getFilesToSort(files []*ast.File, options *Options, fileSet *token.FileSet) ([]*ast.File, error) {
 	var filesToSort []*ast.File
 
-	if options.ConcatPackages {
+	if options.SplitFilesByPackage {
 		filePackageMap := make(map[string][]*ast.File)
 
 		for _, file := range files {
@@ -282,13 +284,18 @@ func containsPrefix(info fs.FileInfo, prefix []PrefixType) bool {
 	return false
 }
 
-func destinationDirIsValid(rootPath string, destination string) bool {
-	des := anyToString(destination)
+func destinationDirIsValid(rootPath string, destinationPath string) bool {
+	var directoryName string
+	if splitDestination := strings.Split(destinationPath, "/"); len(splitDestination) > 0 {
+		directoryName = splitDestination[len(splitDestination)-1]
+	} else {
+		directoryName = destinationPath
+	}
 	dirIsValid := false
 
-	filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
+	filepath.Walk(rootPath, func(_ string, info fs.FileInfo, _ error) error {
 		if info.IsDir() {
-			if info.Name() == des {
+			if info.Name() == directoryName {
 				dirIsValid = true
 			}
 		}
