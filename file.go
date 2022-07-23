@@ -22,7 +22,7 @@ func ConcatFiles(files []*ast.File, fileSet *token.FileSet) (*ast.File, error) {
 		return targetFile, nil
 	}
 
-	// concat targetfile
+	// concat target file
 	concatenateTargetFile(targetFile)
 
 	var importsToAdd []string
