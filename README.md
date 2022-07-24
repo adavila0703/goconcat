@@ -65,7 +65,7 @@ func main() {
 
 ### Options
 
-Alternatively, if you decide to not use JSON for options, you can set you options using SetOptions() method.
+Alternatively, if you decide to not use JSON for options, you can set your options using the SetOptions() function.
 
 ```go
 package main
@@ -88,7 +88,7 @@ func main() {
 
 ### Functions
 
-You can also go around using options and concatenate files by file paths.
+You can also skip the use of options and concatenate files manually.
 
 ```go
 package main
